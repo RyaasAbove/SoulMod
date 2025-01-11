@@ -2,7 +2,9 @@ package net.ryaas.soulmod;
 
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.entity.EntityRenderers;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.RegisterParticleProvidersEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
@@ -14,61 +16,95 @@ import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.ryaas.soulmod.assisting.visuals.ModParticleTypes;
+import net.ryaas.soulmod.assisting.ModSounds;
+import net.ryaas.soulmod.assisting.visuals.comettrail.RedCometTrailProvider;
+import net.ryaas.soulmod.entities.ModEntities;
+import net.ryaas.soulmod.network.NetworkHandler;
+import net.ryaas.soulmod.powers.AbilityRegistry;
+import net.ryaas.soulmod.powers.rg.*;
+import net.ryaas.soulmod.powers.starspawn.basestar.BaseStarRenderer;
+import net.ryaas.soulmod.powers.starspawn.basestar.BaseStarburnRenderer;
 import org.slf4j.Logger;
 
 // The value here should match an entry in the META-INF/mods.toml file
 @Mod(SoulMod.MODID)
-public class SoulMod
-{
-    // Define mod id in a common place for everything to reference
+public class SoulMod {
     public static final String MODID = "soulmod";
-    // Directly reference a slf4j logger
     private static final Logger LOGGER = LogUtils.getLogger();
-    public SoulMod()
-    {
+
+    public SoulMod() {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
 
-        // Register the commonSetup method for modloading
+        // Register event listeners on the mod event bus
         modEventBus.addListener(this::commonSetup);
-
-        // Register ourselves for server and other game events we are interested in
-        MinecraftForge.EVENT_BUS.register(this);
-
-        // Register the item to a creative tab
         modEventBus.addListener(this::addCreative);
 
-        // Register our mod's ForgeConfigSpec so that Forge can create and load the config file for us
+
+        // Register ourselves on the Forge event bus for non-mod-lifecycle events
+        MinecraftForge.EVENT_BUS.register(this);
+        ModSounds.SOUND_EVENTS.register(FMLJavaModLoadingContext.get().getModEventBus());
+        ModEntities.ENTITIES.register(modEventBus);
+
+        ModParticleTypes.PARTICLE_TYPES.register(FMLJavaModLoadingContext.get().getModEventBus());
+
+        // If you have a config file:
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.SPEC);
     }
 
-    private void commonSetup(final FMLCommonSetupEvent event)
-    {
+    private void commonSetup(final FMLCommonSetupEvent event) {
+        // Use enqueueWork to ensure this runs at the correct time after registries are done
+        event.enqueueWork(() -> {
+            IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
 
+            // Register abilities
+            AbilityRegistry.registerAbilities();
+            // Register network packets
+            NetworkHandler.register();
+        });
     }
 
-    // Add the example block item to the building blocks tab
-    private void addCreative(BuildCreativeModeTabContentsEvent event)
-    {
-
+    private void addCreative(BuildCreativeModeTabContentsEvent event) {
+        // Add items to creative tabs if needed
+        // event.register(...);
     }
 
-    // You can use SubscribeEvent and let the Event Bus discover methods to call
+    // This event is fired on Forge event bus, and we already registered MinecraftForge.EVENT_BUS
     @SubscribeEvent
-    public void onServerStarting(ServerStartingEvent event)
-    {
-
+    public void onServerStarting(ServerStartingEvent event) {
+        // Perform server-start logic if needed
+        LOGGER.info("Server starting with SoulMod loaded!");
     }
 
-    // You can use EventBusSubscriber to automatically register all static methods in the class annotated with @SubscribeEvent
+
+
     @Mod.EventBusSubscriber(modid = MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
-    public static class ClientModEvents
-    {
+    public static class ClientModEvents {
+
         @SubscribeEvent
-        public static void onClientSetup(FMLClientSetupEvent event)
-        {
-            // Some client setup code
-            LOGGER.info("HELLO FROM CLIENT SETUP");
+        public static void onRegisterParticleProviders(RegisterParticleProvidersEvent event) {
+            event.registerSpriteSet(ModParticleTypes.RED_EXPLOSION.get(),
+                    new RedExplosionParticleRegistration<>());
+            event.registerSpriteSet(ModParticleTypes.RED_ORB.get(),
+                    RedCometTrailProvider::new);
+        }
+
+        @SubscribeEvent
+        public static void onClientSetup(FMLClientSetupEvent event) {
+            LOGGER.info("HELLO FROM CLIENT SETUP of SoulMod");
             LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
+            // Any client-specific setup like rendering, keybinds, etc.
+            event.enqueueWork(() -> {
+                EntityRenderers.register(ModEntities.BASE_STAR.get(), BaseStarRenderer::new);
+                EntityRenderers.register(ModEntities.BASE_STARBURN.get(), BaseStarburnRenderer::new);
+                EntityRenderers.register(ModEntities.RED_GIANT.get(), RenderRG::new);
+                EntityRenderers.register(ModEntities.RED_EXPLOSION.get(), RedExplosionRenderer::new);
+
+
+
+
+            });
         }
     }
+
 }

@@ -1,0 +1,11 @@
+{
+  "red_giant_explosion": {
+    "category": "hostile",
+    "sounds": [
+      {
+        "name": "soulmod:red_giant_explosion",
+        "stream": false
+      }
+    ]
+  }
+}
