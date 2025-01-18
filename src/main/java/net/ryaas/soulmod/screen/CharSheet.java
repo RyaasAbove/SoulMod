@@ -60,15 +60,13 @@ public class CharSheet extends Screen {
         // Build the "available abilities" icons on the left side
         populateAvailableAbilities();
 
-        // Create 5 "equipped" slots at the bottom of our panel, centered horizontally
+        // Create 5 normal slots at the bottom of our panel, centered horizontally
         int slotCount = 5;
         int slotSize = 24;
         int padding = 5;
-        // total width for all slots + internal padding (4 gaps if 5 slots)
         int totalSlotsWidth = (slotCount * slotSize) + ((slotCount - 1) * padding);
 
-        // You can adjust how "far" from the bottom you want them.
-        // For instance, (imageHeight - slotSize - 10) places them near the bottom edge:
+        // Vertical position for the normal slots
         int slotsY = topPos + (imageHeight - slotSize - 10);
 
         // Figure out where to start so the group is centered
@@ -78,6 +76,11 @@ public class CharSheet extends Screen {
             int slotX = startX + i * (slotSize + padding);
             slots.add(new AbilitySlot(slotX, slotsY, slotSize, slotSize, i));
         }
+
+        // Add the 6th slot slightly further apart for the movement-change ability
+        int movementSlotPadding = 20; // Additional padding for the 6th slot
+        int movementSlotX = startX + slotCount * (slotSize + padding) + movementSlotPadding;
+        slots.add(new AbilitySlot(movementSlotX, slotsY, slotSize, slotSize, slotCount));
 
         // Load whichever abilities the server says we currently have equipped
         loadEquippedAbilities();
@@ -92,7 +95,7 @@ public class CharSheet extends Screen {
         int padding = 5;
         int xStart = leftPos + 10;
         int yStart = topPos + 30;
-        int perRow = 5;
+        int perRow = 5; //change to extend row
 
         var ids = AbilityRegistry.getAllAbilityIds().toArray(new String[0]);
         for (int i = 0; i < ids.length; i++) {
@@ -137,28 +140,39 @@ public class CharSheet extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        // Left-click is button == 0
         if (button == 0) {
-            // If we're already dragging something, no new drag
+            // If we're already dragging something, don't start a new drag
             if (draggingIcon != null) {
                 return super.mouseClicked(mouseX, mouseY, button);
             }
 
-            // Check if we clicked on a slot that already has an ability
+            // 1) Check if we clicked on a slot that already has an ability
             for (AbilitySlot slot : slots) {
                 if (slot.isMouseOver((int) mouseX, (int) mouseY)) {
                     if (slot.abilityId != null && !slot.abilityId.isEmpty()) {
-                        // "Un-equipping" from that slot
-                        NetworkHandler.INSTANCE.sendToServer(
-                                new C2SEquipAbilityPacket(slot.slotIndex, "")
+                        // Begin dragging from this slot
+                        draggingFromSlot = slot;
+
+                        // Create an icon to visually drag
+                        draggingIcon = new AbilityIcon(
+                                slot.abilityId,
+                                slot.x, slot.y,
+                                slot.width, slot.height,
+                                AbilityRegistry.getAbility(slot.abilityId).getIconPath()
                         );
-                        slot.setAbilityId(null); // visually remove on client
+                        // Remove it from the slot visually
+                        slot.setAbilityId(null);
+
+                        // Store offsets so we can render it at correct position
+                        draggingOffsetX = (int) mouseX - slot.x;
+                        draggingOffsetY = (int) mouseY - slot.y;
+
                         return true;
                     }
                 }
             }
 
-            // Otherwise, check if we clicked on an ability icon to drag it
+            // 2) Otherwise, check if we clicked on an ability icon to drag it
             for (AbilityIcon icon : availableAbilities) {
                 if (icon.isMouseOver((int) mouseX, (int) mouseY)) {
                     draggingIcon = icon;
@@ -168,6 +182,7 @@ public class CharSheet extends Screen {
                 }
             }
         }
+
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
@@ -184,18 +199,41 @@ public class CharSheet extends Screen {
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         if (button == 0 && draggingIcon != null) {
-            // We "drop" the icon onto a slot, if hovered
+            boolean droppedOnSlot = false;
+
+            // Check if we dropped on a slot
             for (AbilitySlot slot : slots) {
                 if (slot.isMouseOver((int) mouseX, (int) mouseY)) {
                     String abilityId = draggingIcon.abilityId;
+                    // Equip
                     NetworkHandler.INSTANCE.sendToServer(
                             new C2SEquipAbilityPacket(slot.slotIndex, abilityId)
                     );
-                    slot.setAbilityId(abilityId); // visually update
+                    slot.setAbilityId(abilityId);
+
+                    droppedOnSlot = true;
                     break;
                 }
             }
+
+            // If we did NOT drop on any slot
+            if (!droppedOnSlot) {
+                // Were we dragging from a slot originally?
+                if (draggingFromSlot != null) {
+                    // Then we want to “unequip,” i.e. set that slot to empty on server
+                    NetworkHandler.INSTANCE.sendToServer(
+                            new C2SEquipAbilityPacket(draggingFromSlot.slotIndex, "")
+                    );
+                    // draggingFromSlot is already visually empty. Nothing else to do.
+                }
+                // If we were dragging from the “available abilities” list, do nothing
+                // (the user basically just cancelled the drag).
+            }
+
+            // Clear drag states
             draggingIcon = null;
+            draggingFromSlot = null;
+
             return true;
         }
         return super.mouseReleased(mouseX, mouseY, button);
@@ -222,7 +260,7 @@ public class CharSheet extends Screen {
 
         // Render the 5 slots
         for (AbilitySlot slot : slots) {
-            slot.render(graphics, mouseX, mouseY, partialTicks);
+            slot.render(graphics, mouseX, mouseY, partialTicks, draggingIcon);
         }
 
         // Render each ability icon (unless it's the one we're dragging)
@@ -274,15 +312,29 @@ public class CharSheet extends Screen {
                     && mouseY >= y && mouseY < y + height;
         }
 
-        public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTicks) {
-            // Draw a simple slot background
-            int color = 0x44FFFFFF; // translucent white
-            graphics.fillGradient(x, y, x + width, y + height, color, color);
+        public void render(
+                GuiGraphics graphics,
+                int mouseX,
+                int mouseY,
+                float partialTicks,
+                AbilityIcon currentlyDragging
+        ) {
+            // Base slot color
+            int slotColor = 0x44FFFFFF; // translucent white
 
-            // If there's an ability equipped, we could draw an icon or text
+            boolean hovered = isMouseOver(mouseX, mouseY);
+
+            // If we are currently dragging an icon, highlight the slot on hover
+            if (currentlyDragging != null && hovered) {
+                // e.g. bright yellow highlight
+                slotColor = 0x88FFFF00;
+            }
+
+            // Draw the slot background (or highlight if hovered)
+            graphics.fillGradient(x, y, x + width, y + height, slotColor, slotColor);
+
+            // If there's an ability equipped, draw its ID or an icon (up to you)
             if (abilityId != null && !abilityId.isEmpty()) {
-                // Optionally, draw the ability's icon or name
-                // For simplicity, just draw the abilityId as text
                 graphics.drawString(
                         Minecraft.getInstance().font,
                         abilityId,

@@ -14,13 +14,16 @@ import java.util.Set;
 public class PlayerAbilities implements IPlayerAbilities {
     private static final int NUM_SLOTS = 5;
 
+    // Tracks whether the player is currently charging SoulShot
+    private boolean soulShotCharging = false;
+
     // For multi-slot:
     private final String[] slots = new String[NUM_SLOTS];
 
     // For single "active" ability:
     private String activeAbility = "";
 
-    // For press-and-hold logic:
+    // For press-and-hold logic (start time):
     private long chargeStartTime = 0;
 
     public PlayerAbilities() {
@@ -29,16 +32,23 @@ public class PlayerAbilities implements IPlayerAbilities {
             slots[i] = "";
         }
     }
+
+    // ===================================
+    // isSoulShotCharging logic
+    // ===================================
     @Override
-    public void unlockAbility(String abilityId) {
-        // If you have an "unlockedAbilities" set, add it there.
-        // If not, do nothing:
-        // unlockedAbilities.add(abilityId);
+    public boolean isSoulShotCharging() {
+        return this.soulShotCharging;
     }
 
-    /* =========================
-       Multiple Slots
-       ========================= */
+    @Override
+    public void setSoulShotCharging(boolean charging) {
+        this.soulShotCharging = charging;
+    }
+
+    // ===================================
+    // Multiple Slots
+    // ===================================
     @Override
     public int getSlotCount() {
         return NUM_SLOTS;
@@ -57,9 +67,9 @@ public class PlayerAbilities implements IPlayerAbilities {
         slots[slot] = abilityId;
     }
 
-    /* =========================
-       Single "Active" Ability
-       ========================= */
+    // ===================================
+    // Active Ability
+    // ===================================
     @Override
     public String getActiveAbility() {
         return activeAbility;
@@ -71,9 +81,14 @@ public class PlayerAbilities implements IPlayerAbilities {
         this.activeAbility = abilityId;
     }
 
-    /* =========================
-       Press-and-Hold
-       ========================= */
+    @Override
+    public void unlockAbility(String abilityId) {
+        // No-op unless you want to track "unlocked" abilities
+    }
+
+    // ===================================
+    // Press-and-Hold
+    // ===================================
     @Override
     public void startCharge(long time) {
         this.chargeStartTime = time;
@@ -89,9 +104,9 @@ public class PlayerAbilities implements IPlayerAbilities {
         this.chargeStartTime = 0;
     }
 
-    /* =========================
-       NBT Serialization
-       ========================= */
+    // ===================================
+    // NBT Serialization
+    // ===================================
     @Override
     public CompoundTag serializeNBT() {
         CompoundTag tag = new CompoundTag();
@@ -108,22 +123,10 @@ public class PlayerAbilities implements IPlayerAbilities {
         // 3) Save the charge time
         tag.putLong("ChargeStart", chargeStartTime);
 
+        // 4) Save soulShotCharging
+        tag.putBoolean("SoulShotCharging", this.soulShotCharging);
+
         return tag;
-    }
-    public static void syncAbilitiesToClient(ServerPlayer player, IPlayerAbilities abilities) {
-        if (player.level().isClientSide) return; // do server-only
-
-        // 1. Serialize the capability data
-        CompoundTag data = abilities.serializeNBT();
-        String playerId = player.getUUID().toString();
-
-        // 2. Create a packet that sends "playerId" and "data"
-        // (You must define a matching S2CSyncAbilitiesPacket or similar)
-        NetworkHandler.INSTANCE.sendTo(
-                new S2CSyncAbilitiesPacket(playerId, data),
-                player.connection.connection,
-                NetworkDirection.PLAY_TO_CLIENT
-        );
     }
 
     @Override
@@ -140,5 +143,23 @@ public class PlayerAbilities implements IPlayerAbilities {
 
         // 3) Load the charge time
         this.chargeStartTime = nbt.getLong("ChargeStart");
+
+        // 4) Load soulShotCharging
+        this.soulShotCharging = nbt.getBoolean("SoulShotCharging");
+    }
+
+    public static void syncAbilitiesToClient(ServerPlayer player, IPlayerAbilities abilities) {
+        if (player.level().isClientSide) return; // do server-only
+
+        // 1. Serialize the capability data
+        CompoundTag data = abilities.serializeNBT();
+        String playerId = player.getUUID().toString();
+
+        // 2. Send packet
+        NetworkHandler.INSTANCE.sendTo(
+                new S2CSyncAbilitiesPacket(playerId, data),
+                player.connection.connection,
+                NetworkDirection.PLAY_TO_CLIENT
+        );
     }
 }

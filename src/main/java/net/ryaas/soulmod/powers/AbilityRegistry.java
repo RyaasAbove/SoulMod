@@ -1,10 +1,13 @@
 package net.ryaas.soulmod.powers;
 
 import net.minecraftforge.registries.ObjectHolder;
+import net.ryaas.soulmod.entities.ModEntities;
+import net.ryaas.soulmod.powers.soulshot.SoulShot;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 public class AbilityRegistry {
     private static final Map<String, Ability> ABILITIES = new HashMap<>();
@@ -12,9 +15,14 @@ public class AbilityRegistry {
     // Initialize abilities
     public static void registerAbilities() {
         // Example abilities
-        registerAbility(new Ability("fireball", "Launch a fireball towards a target.", "starspawn.png", false));
-        registerAbility(new Ability("starspawn", "Spawn a selection of stars.", "space_path_spritesheet.png", true));
-        registerAbility(new Ability("rg", "Spawn a giant red star.", "space_path_spritesheet.png", true));
+        registerAbility(
+                new Ability("fireball", "Launch a fireball towards a target.", "starspawn.png", false));
+        registerAbility(
+                new Ability("starspawn", "Spawn a selection of stars.", "space_path_spritesheet.png", true));
+        registerAbility(
+                new Ability("rg", "Spawn a giant red star.", "space_path_spritesheet.png", true));
+        registerAbility(
+                new Ability("soulshot", "Fire a beam of spiritual energy", "space_path_spritesheet.png", true));
         // Add more abilities as needed
     }
 
@@ -36,5 +44,6 @@ public class AbilityRegistry {
         if (ability == null) return false;
         return ability.isChargeable();
     }
+
 
 }

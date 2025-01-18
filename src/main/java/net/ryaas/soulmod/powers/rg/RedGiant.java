@@ -5,6 +5,7 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
@@ -19,6 +20,7 @@ import net.minecraft.world.phys.*;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.server.ServerLifecycleHooks;
 import net.ryaas.soulmod.assisting.ModSounds;
+import net.ryaas.soulmod.entities.ModEntities;
 import net.ryaas.soulmod.network.NetworkHandler;
 import net.ryaas.soulmod.network.s2cpackets.S2CRGTrailPacket;
 import software.bernie.geckolib.core.animatable.GeoAnimatable;
@@ -44,6 +46,8 @@ public class RedGiant extends Entity implements GeoAnimatable {
 
     private static final EntityDataAccessor<Boolean> IN_FLIGHT =
             SynchedEntityData.defineId(RedGiant.class, EntityDataSerializers.BOOLEAN);
+        private static final EntityDataAccessor<Boolean> SHOULD_DROP =
+            SynchedEntityData.defineId(RedGiant.class, EntityDataSerializers.BOOLEAN);
 
 
     private static final int MAX_CHARGE_LEVEL = 65;
@@ -60,6 +64,8 @@ public class RedGiant extends Entity implements GeoAnimatable {
     private UUID ownerUUID;
     private boolean inFlight = false;
     private long finalCharge = 0;          // Optionally store the final release value
+
+    private float launchSpeed;
     // Track whether we’ve finished playing the spawn animation.
     private boolean spawnAnimDone = false;
 
@@ -98,8 +104,11 @@ public class RedGiant extends Entity implements GeoAnimatable {
         this.entityData.define(CHARGE_LEVEL, 0);
         this.entityData.define(IS_LARGE, false);
         this.entityData.define(IN_FLIGHT, false);
+        this.entityData.define(SHOULD_DROP, true);
         this.isCharging = true;
         this.inFlight   = false;
+        this.launchSpeed = 2;
+
 
     }
 
@@ -365,6 +374,12 @@ public class RedGiant extends Entity implements GeoAnimatable {
         return this.entityData.get(CHARGE_LEVEL);
     }
 
+
+
+
+
+
+
     public void setChargeLevel(int charge) {
         this.entityData.set(CHARGE_LEVEL, charge);
     }
@@ -548,4 +563,28 @@ public class RedGiant extends Entity implements GeoAnimatable {
         entity.setDeltaMovement(entity.getDeltaMovement().add(knockbackX, knockbackY, knockbackZ));
         entity.hasImpulse = true;
     }
+
+    public void create(ServerPlayer player){
+        if (player.level().isClientSide())
+            return;
+
+        RedGiant redstar = ModEntities.RED_GIANT.get().create(player.level());
+        if (redstar == null) {
+            System.out.println("[DEBUG] Failed to create RedGiant entity!");
+            return;
+        }
+
+        redstar.setOwnerUUID(player.getUUID());
+        redstar.setCharging(true); // ensures float logic in tick()
+
+        // Position it above player's head with increased offset
+        redstar.setPos(player.getX(), player.getEyeY() + 3.0, player.getZ());
+
+        player.level().addFreshEntity(redstar);
+        System.out.println("[DEBUG] Spawned a new charging RedGiant for " + player.getName().getString());
+    }
+
+
+
+
 }

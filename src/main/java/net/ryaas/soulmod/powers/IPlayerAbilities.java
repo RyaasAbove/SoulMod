@@ -21,6 +21,9 @@ public interface IPlayerAbilities extends INBTSerializable<CompoundTag> {
      */
     String getAbilityInSlot(int slot);
 
+    boolean isSoulShotCharging();
+    void setSoulShotCharging(boolean charging);
+
     /**
      * Sets the given slot to the specified ability ID, or "" to clear.
      */

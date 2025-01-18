@@ -16,13 +16,16 @@ import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.ryaas.soulmod.assisting.MyEmoteRegistry;
 import net.ryaas.soulmod.assisting.visuals.ModParticleTypes;
 import net.ryaas.soulmod.assisting.ModSounds;
 import net.ryaas.soulmod.assisting.visuals.comettrail.RedCometTrailProvider;
 import net.ryaas.soulmod.entities.ModEntities;
 import net.ryaas.soulmod.network.NetworkHandler;
+import net.ryaas.soulmod.player.soulshot.ArmCannonRenderer;
 import net.ryaas.soulmod.powers.AbilityRegistry;
 import net.ryaas.soulmod.powers.rg.*;
+import net.ryaas.soulmod.powers.soulshot.SoulShotBeamRenderer;
 import net.ryaas.soulmod.powers.starspawn.basestar.BaseStarRenderer;
 import net.ryaas.soulmod.powers.starspawn.basestar.BaseStarburnRenderer;
 import org.slf4j.Logger;
@@ -61,6 +64,7 @@ public class SoulMod {
             AbilityRegistry.registerAbilities();
             // Register network packets
             NetworkHandler.register();
+            MyEmoteRegistry.loadEmotes();
         });
     }
 
@@ -99,7 +103,8 @@ public class SoulMod {
                 EntityRenderers.register(ModEntities.BASE_STARBURN.get(), BaseStarburnRenderer::new);
                 EntityRenderers.register(ModEntities.RED_GIANT.get(), RenderRG::new);
                 EntityRenderers.register(ModEntities.RED_EXPLOSION.get(), RedExplosionRenderer::new);
-
+                EntityRenderers.register(ModEntities.SOUL_SHOT.get(), SoulShotBeamRenderer::new);
+                EntityRenderers.register(ModEntities.ARM_CANNON.get(), ArmCannonRenderer::new);
 
 
 

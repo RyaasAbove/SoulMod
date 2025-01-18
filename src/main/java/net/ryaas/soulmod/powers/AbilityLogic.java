@@ -1,11 +1,24 @@
 package net.ryaas.soulmod.powers;
 
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 import net.ryaas.soulmod.entities.ModEntities;
 import net.ryaas.soulmod.powers.rg.RedGiant;
 import net.ryaas.soulmod.powers.starspawn.basestar.BaseStar;
 
 import java.util.UUID;
+import java.util.function.Supplier;
+
+import static net.ryaas.soulmod.powers.AbilityRegistry.*;
 
 public class AbilityLogic {
 
@@ -33,6 +46,9 @@ public class AbilityLogic {
                 existingStar.setCharging(true);
             }
         }
+        else if("darkspark".equals(abilityId)){
+
+        }
         // else if ("someOtherChargeable".equals(abilityId)) { ... }
     }
 
@@ -54,7 +70,10 @@ public class AbilityLogic {
                 shootRedStar(player, redstar);
             }
         }
-        // else if ("someOtherChargeable".equals(abilityId)) { ... }
+        else if("rg".equals(abilityId)){
+
+        }
+
     }
 
     /**

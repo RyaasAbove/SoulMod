@@ -7,6 +7,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.NetworkEvent;
@@ -14,13 +15,9 @@ import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 import net.ryaas.soulmod.SoulMod;
-import net.ryaas.soulmod.network.c2spackets.C2SAbilityKeyStatePacket;
-import net.ryaas.soulmod.network.c2spackets.C2SActivateSelectedAbilityPacket;
-import net.ryaas.soulmod.network.c2spackets.C2SEquipAbilityPacket;
-import net.ryaas.soulmod.network.c2spackets.C2SSetActiveAbilityPacket;
-import net.ryaas.soulmod.network.s2cpackets.S2CRGExplosionPacket;
-import net.ryaas.soulmod.network.s2cpackets.S2CRGTrailPacket;
-import net.ryaas.soulmod.network.s2cpackets.S2CSyncAbilitiesPacket;
+import net.ryaas.soulmod.network.c2spackets.*;
+//import net.ryaas.soulmod.network.c2spackets.C2SActivateSelectedAbilityPacket;
+import net.ryaas.soulmod.network.s2cpackets.*;
 import net.ryaas.soulmod.powers.AbilityCapability;
 
 import java.util.function.Supplier;
@@ -28,7 +25,7 @@ import java.util.function.Supplier;
 public class NetworkHandler {
     private static final String PROTOCOL_VERSION = "1";
     public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
-            new ResourceLocation(SoulMod.MODID, "main"),
+            new ResourceLocation("soulmod", "main"),
             () -> PROTOCOL_VERSION,
             PROTOCOL_VERSION::equals,
             PROTOCOL_VERSION::equals
@@ -39,12 +36,15 @@ public class NetworkHandler {
     public static void register() {
         INSTANCE.registerMessage(id++, S2CSyncAbilitiesPacket.class, S2CSyncAbilitiesPacket::encode, S2CSyncAbilitiesPacket::decode, S2CSyncAbilitiesPacket::handle);
         INSTANCE.registerMessage(id++, C2SEquipAbilityPacket.class, C2SEquipAbilityPacket::encode, C2SEquipAbilityPacket::decode, C2SEquipAbilityPacket::handle);
-        INSTANCE.registerMessage(id++, C2SActivateSelectedAbilityPacket.class, C2SActivateSelectedAbilityPacket::encode, C2SActivateSelectedAbilityPacket::decode, C2SActivateSelectedAbilityPacket::handle);
+        INSTANCE.registerMessage(id++, S2CSoulShotBeamPacket.class, S2CSoulShotBeamPacket::encode, S2CSoulShotBeamPacket::decode, S2CSoulShotBeamPacket::handle);
         INSTANCE.registerMessage(id++, C2SAbilityKeyStatePacket.class, C2SAbilityKeyStatePacket::encode, C2SAbilityKeyStatePacket::decode, C2SAbilityKeyStatePacket::handle);
         INSTANCE.registerMessage(id++, C2SSetActiveAbilityPacket.class, C2SSetActiveAbilityPacket::encode, C2SSetActiveAbilityPacket::decode, C2SSetActiveAbilityPacket::handle);
         INSTANCE.registerMessage(id++, S2CRGExplosionPacket.class, S2CRGExplosionPacket::encode, S2CRGExplosionPacket::decode, S2CRGExplosionPacket::handle);
         INSTANCE.registerMessage(id++, S2CRGTrailPacket.class, S2CRGTrailPacket::encode, S2CRGTrailPacket::decode, S2CRGTrailPacket::handle);
-
+        INSTANCE.registerMessage(id++, S2CSyncPlayerAnimationPacket.class, S2CSyncPlayerAnimationPacket::encode, S2CSyncPlayerAnimationPacket::decode, S2CSyncPlayerAnimationPacket::handle);
+        INSTANCE.registerMessage(id++, C2SSetAnimationServerPacket.class, C2SSetAnimationServerPacket::encode, C2SSetAnimationServerPacket::decode, C2SSetAnimationServerPacket::handle);
+        INSTANCE.registerMessage(id++, C2SFireRaycastPacket.class, C2SFireRaycastPacket::encode, C2SFireRaycastPacket::decode, C2SFireRaycastPacket::handle);
+        System.out.println("[DEBUG] final registered message ID = " + id);
 
     }
 
@@ -95,6 +95,22 @@ public class NetworkHandler {
         // Use 'dimension()' or 'dimensionKey()' based on your version
         ResourceKey<Level> dimensionKey = serverLevel.dimension();
         INSTANCE.send(PacketDistributor.NEAR.with(() -> new PacketDistributor.TargetPoint(x, y, z, 64, dimensionKey)), packet);
+    }
+
+    public static void sendToPlayersNearbyAndSelf(Object packet, ServerPlayer sender) {
+        // Send to players around the sender
+        INSTANCE.send(
+                PacketDistributor.NEAR.with(() -> new PacketDistributor.TargetPoint(
+                        sender.getX(), sender.getY(), sender.getZ(),
+                        64.0D, sender.level().dimension()
+                )),
+                packet
+        );
+        // Send to the sender, too
+        INSTANCE.send(
+                PacketDistributor.PLAYER.with(() -> sender),
+                packet
+        );
     }
 
 
