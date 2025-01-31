@@ -29,6 +29,11 @@ public class ModParticleTypes {
                     () -> new SimpleParticleType(true) // "alwaysShow" = true for ignoring distance
             );
 
+    public static final RegistryObject<SimpleParticleType> VOIDSONG =
+            PARTICLE_TYPES.register("voidsong",
+                    () -> new SimpleParticleType(true) // "alwaysShow" = true for ignoring distance
+            );
+
 
 }
 

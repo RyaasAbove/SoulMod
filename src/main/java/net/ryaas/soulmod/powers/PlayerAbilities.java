@@ -14,18 +14,21 @@ import java.util.Set;
 public class PlayerAbilities implements IPlayerAbilities {
     private static final int NUM_SLOTS = 5;
 
-    // Tracks whether the player is currently charging SoulShot
-    private boolean soulShotCharging = false;
-
-    // For multi-slot:
+    // --- Multiple Slots ---
     private final String[] slots = new String[NUM_SLOTS];
 
-    // For single "active" ability:
+    // --- Single "active" ability ---
     private String activeAbility = "";
 
-    // For press-and-hold logic (start time):
+    // --- Generic charging logic ---
+    // Which ability is charging ("" if none)
+    private String chargingAbility = "";
+    // How many ticks we've been charging
+    private int currentChargeTicks = 0;
+    // If you want a timestamp approach, you can store it as well
     private long chargeStartTime = 0;
 
+    // --- Constructor ---
     public PlayerAbilities() {
         // Initialize slots to empty
         for (int i = 0; i < NUM_SLOTS; i++) {
@@ -33,22 +36,9 @@ public class PlayerAbilities implements IPlayerAbilities {
         }
     }
 
-    // ===================================
-    // isSoulShotCharging logic
-    // ===================================
-    @Override
-    public boolean isSoulShotCharging() {
-        return this.soulShotCharging;
-    }
-
-    @Override
-    public void setSoulShotCharging(boolean charging) {
-        this.soulShotCharging = charging;
-    }
-
-    // ===================================
-    // Multiple Slots
-    // ===================================
+    /* =========================
+       Multiple Slots
+    ========================= */
     @Override
     public int getSlotCount() {
         return NUM_SLOTS;
@@ -67,9 +57,9 @@ public class PlayerAbilities implements IPlayerAbilities {
         slots[slot] = abilityId;
     }
 
-    // ===================================
-    // Active Ability
-    // ===================================
+    /* =========================
+       Single "Active" Ability
+    ========================= */
     @Override
     public String getActiveAbility() {
         return activeAbility;
@@ -86,9 +76,78 @@ public class PlayerAbilities implements IPlayerAbilities {
         // No-op unless you want to track "unlocked" abilities
     }
 
-    // ===================================
-    // Press-and-Hold
-    // ===================================
+    /* =========================
+       Generic Charging
+    ========================= */
+    @Override
+    public String getChargingAbility() {
+        return chargingAbility;
+    }
+
+    @Override
+    public void setCharging(boolean charging) {
+        if (!charging) {
+            // stop any charging
+            this.chargingAbility = "";
+            this.currentChargeTicks = 0;
+        }
+        // If charging == true, do nothing *here* unless you want to set a default.
+        // You can rely on setChargingAbility(...) for the actual ability name
+    }
+    @Override
+    public void setChargingAbility(String abilityId) {
+        this.chargingAbility = (abilityId != null) ? abilityId : "";
+    }
+
+    @Override
+    public boolean isCharging() {
+        // If chargingAbility is NOT empty, we say the player is charging something
+        return !this.chargingAbility.isEmpty();
+    }
+
+    @Override
+    public int getChargeTicks() {
+        return this.currentChargeTicks;
+    }
+
+    @Override
+    public void setChargeTicks(int ticks) {
+        this.currentChargeTicks = ticks;
+    }
+
+    @Override
+    public void incrementChargeTicks() {
+        this.currentChargeTicks++;
+    }
+
+    @Override
+    public void execute(Player player, float charge) {
+
+    }
+
+    @Override
+    public String getID() {
+        return null;
+    }
+
+    @Override
+    public float getCost() {
+        return 0;
+    }
+
+    @Override
+    public float getCooldown() {
+        return 0;
+    }
+
+    @Override
+    public AbilityType getType() {
+        return null;
+    }
+
+    /* =========================
+       Timestamp Approach
+    ========================= */
     @Override
     public void startCharge(long time) {
         this.chargeStartTime = time;
@@ -96,7 +155,7 @@ public class PlayerAbilities implements IPlayerAbilities {
 
     @Override
     public long getChargeStart() {
-        return chargeStartTime;
+        return this.chargeStartTime;
     }
 
     @Override
@@ -104,9 +163,9 @@ public class PlayerAbilities implements IPlayerAbilities {
         this.chargeStartTime = 0;
     }
 
-    // ===================================
-    // NBT Serialization
-    // ===================================
+    /* =========================
+       NBT Serialization
+    ========================= */
     @Override
     public CompoundTag serializeNBT() {
         CompoundTag tag = new CompoundTag();
@@ -118,13 +177,16 @@ public class PlayerAbilities implements IPlayerAbilities {
         }
 
         // 2) Save the active ability
-        tag.putString("ActiveAbility", activeAbility);
+        tag.putString("ActiveAbility", this.activeAbility);
 
-        // 3) Save the charge time
-        tag.putLong("ChargeStart", chargeStartTime);
+        // 3) Save which ability is charging
+        tag.putString("ChargingAbility", this.chargingAbility);
 
-        // 4) Save soulShotCharging
-        tag.putBoolean("SoulShotCharging", this.soulShotCharging);
+        // 4) Save the current charge ticks
+        tag.putInt("CurrentChargeTicks", this.currentChargeTicks);
+
+        // 5) Save the chargeStartTime if you're actually using it
+        tag.putLong("ChargeStartTime", this.chargeStartTime);
 
         return tag;
     }
@@ -135,27 +197,31 @@ public class PlayerAbilities implements IPlayerAbilities {
         int count = nbt.getInt("NumSlots");
         for (int i = 0; i < NUM_SLOTS && i < count; i++) {
             String ab = nbt.getString("Slot_" + i);
-            slots[i] = ab != null ? ab : "";
+            slots[i] = (ab != null) ? ab : "";
         }
 
         // 2) Load the active ability
         this.activeAbility = nbt.getString("ActiveAbility");
 
-        // 3) Load the charge time
-        this.chargeStartTime = nbt.getLong("ChargeStart");
+        // 3) Load charging ability
+        this.chargingAbility = nbt.getString("ChargingAbility");
 
-        // 4) Load soulShotCharging
-        this.soulShotCharging = nbt.getBoolean("SoulShotCharging");
+        // 4) Load current charge ticks
+        this.currentChargeTicks = nbt.getInt("CurrentChargeTicks");
+
+        // 5) Load the chargeStartTime
+        this.chargeStartTime = nbt.getLong("ChargeStartTime");
     }
 
+    /* =========================
+       Sync to Client
+    ========================= */
     public static void syncAbilitiesToClient(ServerPlayer player, IPlayerAbilities abilities) {
-        if (player.level().isClientSide) return; // do server-only
+        if (player.level().isClientSide) return; // server-only
 
-        // 1. Serialize the capability data
         CompoundTag data = abilities.serializeNBT();
         String playerId = player.getUUID().toString();
 
-        // 2. Send packet
         NetworkHandler.INSTANCE.sendTo(
                 new S2CSyncAbilitiesPacket(playerId, data),
                 player.connection.connection,

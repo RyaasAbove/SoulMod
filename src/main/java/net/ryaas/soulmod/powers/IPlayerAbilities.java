@@ -2,15 +2,19 @@ package net.ryaas.soulmod.powers;
 
 
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.common.util.INBTSerializable;
 
 import java.util.Set;
 
-public interface IPlayerAbilities extends INBTSerializable<CompoundTag> {
 
+
+
+
+public interface IPlayerAbilities extends INBTSerializable<CompoundTag> {
     /* =========================
        Multiple Slots
-       ========================= */
+    ========================= */
     /**
      * How many ability slots this player can equip.
      */
@@ -21,17 +25,14 @@ public interface IPlayerAbilities extends INBTSerializable<CompoundTag> {
      */
     String getAbilityInSlot(int slot);
 
-    boolean isSoulShotCharging();
-    void setSoulShotCharging(boolean charging);
-
     /**
      * Sets the given slot to the specified ability ID, or "" to clear.
      */
     void setAbilityInSlot(int slot, String abilityId);
 
     /* =========================
-       Single "Active" Ability
-       ========================= */
+       Active Ability
+    ========================= */
     /**
      * Which ability is currently set as "active" for press/hold usage.
      */
@@ -49,40 +50,62 @@ public interface IPlayerAbilities extends INBTSerializable<CompoundTag> {
     void unlockAbility(String abilityId);
 
     /* =========================
-       Press-and-Hold Methods
-       ========================= */
+       Charging Logic
+    ========================= */
     /**
-     * Called when the key is first pressed for a chargeable ability.
-     * Typically stores the start time in ticks or System time.
+     * Returns true if ANY ability is currently charging.
+     * Typically driven by "chargingAbility != ''".
+     */
+    boolean isCharging();
+
+    /**
+     * For a generic approach, store which ability is currently charging.
+     * If "", then nothing is charging.
+     */
+    String getChargingAbility();
+    void setChargingAbility(String abilityId);
+
+    /**
+     * Current "charge ticks" that get incremented while isCharging() == true.
+     */
+    int getChargeTicks();
+    void setCharging(boolean charging);
+    void setChargeTicks(int ticks);
+    void incrementChargeTicks();
+
+    void execute(Player player, float charge);
+
+    String getID();
+
+    float getCost();
+
+    float getCooldown();
+
+    AbilityType getType();
+
+    enum AbilityType {
+        PROJECTILE,
+        BUFF,
+        DEBUFF,
+        UTILITY
+        // Add more types as needed
+    }
+
+    /**
+     * If you want to keep a start time in addition to ticks, you can,
+     * but it's optional. Shown here as an example.
      */
     void startCharge(long time);
-
-    /**
-     * Returns the stored "start time" for the current charge,
-     * or 0 if not charging.
-     */
     long getChargeStart();
-
-    /**
-     * Clears any stored charge state when the key is released.
-     */
     void clearCharge();
 
     /* =========================
-       Equip & Charge Helpers
-       ========================= */
-    /**
-     * If you have logic that restricts equipping certain abilities,
-     * override this. If not, always true.
-     */
+       Logic Helpers
+    ========================= */
     default boolean canEquipAbility(String abilityId) {
         return true;
     }
 
-    /**
-     * If you have logic that checks if an ability is "chargeable."
-     * For example, "starspawn" or "bowlike" abilities might be chargeable.
-     */
     default boolean isChargeable(String abilityId) {
         return AbilityRegistry.isChargeable(abilityId);
     }

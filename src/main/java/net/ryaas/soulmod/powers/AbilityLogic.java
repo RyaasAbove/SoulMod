@@ -11,9 +11,17 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.network.PacketDistributor;
 import net.ryaas.soulmod.entities.ModEntities;
+
+import net.ryaas.soulmod.network.NetworkHandler;
+import net.ryaas.soulmod.network.s2cpackets.S2CRGTrailPacket;
+import net.ryaas.soulmod.network.s2cpackets.S2CSpawnParticlePacket;
+import net.ryaas.soulmod.powers.darkspark.DarkSpark;
+
 import net.ryaas.soulmod.powers.rg.RedGiant;
 import net.ryaas.soulmod.powers.starspawn.basestar.BaseStar;
+import net.ryaas.soulmod.powers.voidsong.VoidSongLogic;
 
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -46,7 +54,23 @@ public class AbilityLogic {
                 existingStar.setCharging(true);
             }
         }
-        else if("darkspark".equals(abilityId)){
+        else if ("darkspark".equals(abilityId)) {
+            // SERVER-SIDE: set the player's capability
+            player.getCapability(AbilityCapability.PLAYER_ABILITIES_CAPABILITY).ifPresent(cap -> {
+                cap.setChargingAbility("darkspark");
+                cap.setCharging(true); // Ensure you have this method implemented
+                cap.setChargeTicks(0);
+            });
+
+            // Then broadcast a packet so all clients know "this player is charging"
+            UUID uuid = player.getUUID();
+            boolean isCharging = true;
+            String ability = "darkspark";
+
+            sendSwirlParticles(player, true, "soulmod:red_orb");
+        }
+        else if("voidsong".equals(abilityId)) {
+            VoidSongLogic.startCharging(player);
 
         }
         // else if ("someOtherChargeable".equals(abilityId)) { ... }
@@ -62,18 +86,41 @@ public class AbilityLogic {
             if (star != null) {
                 shootStar(player, star);
             }
-        }
-        else if("rg".equals(abilityId)){
+        } else if ("rg".equals(abilityId)) {
             RedGiant redstar = findRedStarByOwner(player);
-            if(redstar != null){
+            if (redstar != null) {
                 redstar.releaseCharge();
                 shootRedStar(player, redstar);
             }
-        }
-        else if("rg".equals(abilityId)){
+        } else if ("darkspark".equals(abilityId)) {
+            player.getCapability(AbilityCapability.PLAYER_ABILITIES_CAPABILITY).ifPresent(cap -> {
+
+                int finalCharge = cap.getChargeTicks();
+
+                DarkSpark.shootDarkSparkBolt(player.level(), player, finalCharge);
+
+                cap.setChargingAbility("");
+                cap.setChargeTicks(0);
+                cap.setCharging(false); // if you want
+
+            });
+
+            // Now send "charging=false"
+            UUID uuid = player.getUUID();
+            boolean isCharging = false; // Corrected to false
+            String ability = "darkspark";
+
+            sendSwirlParticles(player, false, "soulmod:red_orb");
+            System.out.println("[DEBUG] Sent S2CUpdateChargingPacket: Charging=false for player " + player.getName().getString());
+
+
 
         }
+        else if ("voidsong".equals(abilityId)) {
+            System.out.println("Released the VoidSong!");
+            VoidSongLogic.release(player);
 
+        }
     }
 
     /**
@@ -204,5 +251,42 @@ public class AbilityLogic {
                 player.getBoundingBox().inflate(64),
                 s -> s.getOwnerUUID() != null && s.getOwnerUUID().equals(ownerId)
         ).stream().findFirst().orElse(null);
+    }
+
+    private static void sendSwirlParticles(ServerPlayer player, boolean isCharging, String particleID) {
+        // Define swirl parameters
+        int swirlPoints = 8;
+        double radius = 1.0;
+        double yOffset = 1.5;
+
+        for (int i = 0; i < swirlPoints; i++) {
+            double angle = Math.toRadians((360.0 / swirlPoints) * i);
+            double px = player.getX() + radius * Math.cos(angle);
+            double py = player.getY() + yOffset;
+            double pz = player.getZ() + radius * Math.sin(angle);
+            double velocityX = 0;
+            double velocityY = 0.1; // Slight upward movement
+            double velocityZ = 0;
+
+            // Choose particle type based on charging state
+//            String particleId = isCharging ? "minecraft:glow" : "minecraft:smoke";
+
+            S2CSpawnParticlePacket particlePacket = new S2CSpawnParticlePacket(
+                    player.getUUID(),
+                    particleID,
+                    px,
+                    py,
+                    pz,
+                    velocityX,
+                    velocityY,
+                    velocityZ
+            );
+
+            // Choose the packet distribution method based on visibility requirements
+            // To send to all clients:
+            // NetworkHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), particlePacket);
+
+            NetworkHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), particlePacket);
+        }
     }
 }

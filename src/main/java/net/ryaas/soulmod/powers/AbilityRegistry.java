@@ -12,6 +12,7 @@ import java.util.UUID;
 public class AbilityRegistry {
     private static final Map<String, Ability> ABILITIES = new HashMap<>();
 
+
     // Initialize abilities
     public static void registerAbilities() {
         // Example abilities
@@ -23,7 +24,10 @@ public class AbilityRegistry {
                 new Ability("rg", "Spawn a giant red star.", "space_path_spritesheet.png", true));
         registerAbility(
                 new Ability("soulshot", "Fire a beam of spiritual energy", "space_path_spritesheet.png", true));
-        // Add more abilities as needed
+        registerAbility(
+                new Ability("darkspark", "Zap your targets with a dark bolt of lightning.", "starspawn.png", true));
+        registerAbility(
+                new Ability("voidsong", "Shoot a dark projectile to steal your opponents sight.", "starspawn.png", true));
     }
 
     private static void registerAbility(Ability ability) {

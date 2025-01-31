@@ -44,7 +44,10 @@ public class NetworkHandler {
         INSTANCE.registerMessage(id++, S2CSyncPlayerAnimationPacket.class, S2CSyncPlayerAnimationPacket::encode, S2CSyncPlayerAnimationPacket::decode, S2CSyncPlayerAnimationPacket::handle);
         INSTANCE.registerMessage(id++, C2SSetAnimationServerPacket.class, C2SSetAnimationServerPacket::encode, C2SSetAnimationServerPacket::decode, C2SSetAnimationServerPacket::handle);
         INSTANCE.registerMessage(id++, C2SFireRaycastPacket.class, C2SFireRaycastPacket::encode, C2SFireRaycastPacket::decode, C2SFireRaycastPacket::handle);
-        System.out.println("[DEBUG] final registered message ID = " + id);
+
+        INSTANCE.registerMessage(id++, S2CSpawnParticlePacket.class, S2CSpawnParticlePacket::encode, S2CSpawnParticlePacket::decode, S2CSpawnParticlePacket::handle);
+        INSTANCE.registerMessage(id++, C2SAbilityUsePacket.class, C2SAbilityUsePacket::encode, C2SAbilityUsePacket::decode, C2SAbilityUsePacket::handle);
+        INSTANCE.registerMessage(id++, C2SToggleBlockBreakPacket.class, C2SToggleBlockBreakPacket::encode, C2SToggleBlockBreakPacket::decode, C2SToggleBlockBreakPacket::handle);
 
     }
 

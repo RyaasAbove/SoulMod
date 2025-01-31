@@ -2,6 +2,7 @@ package net.ryaas.soulmod.powers;
 
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.player.Player;
 
 import java.util.function.Supplier;
 
@@ -12,6 +13,7 @@ public class Ability {
     private final boolean chargeable;
 
 
+
     public Ability(String id, String description, String iconPath, boolean chargeable) {
         this.id = id;
         this.description = description;
@@ -19,6 +21,31 @@ public class Ability {
         this.chargeable = chargeable;
 
 
+    }
+
+    public void execute(Player player, float charge) {
+
+    }
+
+    float getCost() {
+        return 0;
+    }
+
+    float getCooldown() {
+        return 0;
+    }
+
+
+    AbilityType getType() {
+        return null;
+    }
+
+    enum AbilityType {
+        PROJECTILE,
+        BUFF,
+        DEBUFF,
+        UTILITY
+        // Add more types as needed
     }
 
     public String getId() {

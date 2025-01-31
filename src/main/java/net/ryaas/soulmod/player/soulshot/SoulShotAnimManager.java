@@ -34,7 +34,7 @@ public class SoulShotAnimManager {
         AbstractClientPlayer cPlayer = (AbstractClientPlayer) player;
 
         player.getCapability(AbilityCapability.PLAYER_ABILITIES_CAPABILITY).ifPresent(cap -> {
-            boolean isCharging = cap.isSoulShotCharging();
+
 
             // 1) Get the layer we registered
             ModifierLayer<IAnimation> layer = (ModifierLayer<IAnimation>) PlayerAnimationAccess
@@ -44,7 +44,7 @@ public class SoulShotAnimManager {
             if (layer == null) return;
 
             // If we just started charging this frame
-            if (isCharging && !lastFrameCharging) {
+            if (!lastFrameCharging) {
                 // Set the "charging_soulshot" loop animation
                 var animData = PlayerAnimationRegistry.getAnimation(CHARGING_SOULSHOT);
                 if (animData != null) {
@@ -53,7 +53,7 @@ public class SoulShotAnimManager {
             }
 
             // If we just ended charging
-            if (!isCharging && lastFrameCharging) {
+            if (lastFrameCharging) {
                 // Remove the charging anim
                 layer.setAnimation(null);
 
@@ -64,7 +64,7 @@ public class SoulShotAnimManager {
                 }
             }
 
-            lastFrameCharging = isCharging;
+
         });
     }
 }

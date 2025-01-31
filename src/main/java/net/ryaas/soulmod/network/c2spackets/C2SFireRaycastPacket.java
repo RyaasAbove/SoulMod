@@ -8,13 +8,17 @@ import net.ryaas.soulmod.powers.RaycastManager;
 import java.util.function.Supplier;
 
 public class C2SFireRaycastPacket {
+    private final float charge;
+    public C2SFireRaycastPacket(float charge){
+        this.charge = charge;
+    }
     public static C2SFireRaycastPacket decode(FriendlyByteBuf buf) {
-        // no data needed
-        return new C2SFireRaycastPacket();
+        float charge = buf.readFloat();
+        return new C2SFireRaycastPacket(charge);
     }
 
-    public void encode(FriendlyByteBuf buf) {
-        // no data needed
+    public static void encode(C2SFireRaycastPacket msg, FriendlyByteBuf buf) {
+        buf.writeFloat(msg.charge);
     }
 
     public boolean handle(Supplier<NetworkEvent.Context> ctxSupplier) {

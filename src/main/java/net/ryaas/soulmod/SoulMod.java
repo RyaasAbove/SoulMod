@@ -20,14 +20,21 @@ import net.ryaas.soulmod.assisting.MyEmoteRegistry;
 import net.ryaas.soulmod.assisting.visuals.ModParticleTypes;
 import net.ryaas.soulmod.assisting.ModSounds;
 import net.ryaas.soulmod.assisting.visuals.comettrail.RedCometTrailProvider;
+import net.ryaas.soulmod.config.SoulModClientConfig;
+import net.ryaas.soulmod.config.SoulModCommonConfig;
 import net.ryaas.soulmod.entities.ModEntities;
 import net.ryaas.soulmod.network.NetworkHandler;
 import net.ryaas.soulmod.player.soulshot.ArmCannonRenderer;
 import net.ryaas.soulmod.powers.AbilityRegistry;
+
+import net.ryaas.soulmod.powers.darkspark.DarkSparkRenderer;
 import net.ryaas.soulmod.powers.rg.*;
 import net.ryaas.soulmod.powers.soulshot.SoulShotBeamRenderer;
 import net.ryaas.soulmod.powers.starspawn.basestar.BaseStarRenderer;
 import net.ryaas.soulmod.powers.starspawn.basestar.BaseStarburnRenderer;
+import net.ryaas.soulmod.powers.voidsong.VoidSongParticleProvider;
+import net.ryaas.soulmod.powers.voidsong.VoidSongProjectileRenderer;
+import net.ryaas.soulmod.powers.voidsong.VoidSongRenderer;
 import org.slf4j.Logger;
 
 // The value here should match an entry in the META-INF/mods.toml file
@@ -52,7 +59,7 @@ public class SoulMod {
         ModParticleTypes.PARTICLE_TYPES.register(FMLJavaModLoadingContext.get().getModEventBus());
 
         // If you have a config file:
-        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+        ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, SoulModClientConfig.SPEC);
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
@@ -60,11 +67,14 @@ public class SoulMod {
         event.enqueueWork(() -> {
             IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
 
+
             // Register abilities
             AbilityRegistry.registerAbilities();
             // Register network packets
             NetworkHandler.register();
             MyEmoteRegistry.loadEmotes();
+
+
         });
     }
 
@@ -91,6 +101,8 @@ public class SoulMod {
                     new RedExplosionParticleRegistration<>());
             event.registerSpriteSet(ModParticleTypes.RED_ORB.get(),
                     RedCometTrailProvider::new);
+             event.registerSpriteSet(ModParticleTypes.VOIDSONG.get(),
+                    VoidSongParticleProvider::new);
         }
 
         @SubscribeEvent
@@ -105,6 +117,10 @@ public class SoulMod {
                 EntityRenderers.register(ModEntities.RED_EXPLOSION.get(), RedExplosionRenderer::new);
                 EntityRenderers.register(ModEntities.SOUL_SHOT.get(), SoulShotBeamRenderer::new);
                 EntityRenderers.register(ModEntities.ARM_CANNON.get(), ArmCannonRenderer::new);
+                EntityRenderers.register(ModEntities.DARKSPARK.get(), DarkSparkRenderer::new);
+                EntityRenderers.register(ModEntities.VOIDSONG.get(), VoidSongRenderer::new);
+                EntityRenderers.register(ModEntities.VOIDSONG_PROJ.get(), VoidSongProjectileRenderer::new);
+
 
 
 

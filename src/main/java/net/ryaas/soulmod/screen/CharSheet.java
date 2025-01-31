@@ -11,6 +11,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.ryaas.soulmod.SoulMod;
 import net.ryaas.soulmod.network.NetworkHandler;
 import net.ryaas.soulmod.network.c2spackets.C2SEquipAbilityPacket;
+import net.ryaas.soulmod.network.c2spackets.C2SToggleBlockBreakPacket;
 import net.ryaas.soulmod.powers.Ability;
 import net.ryaas.soulmod.powers.AbilityCapability;
 import net.ryaas.soulmod.powers.AbilityRegistry;
@@ -42,6 +43,10 @@ public class CharSheet extends Screen {
     private int draggingOffsetY = 0;
 
     private AbilitySlot draggingFromSlot = null;
+
+
+    private Button toggleBlockBreakButton;
+    private boolean blockBreakEnabled;
 
     public CharSheet() {
         super(TITLE);
@@ -84,6 +89,56 @@ public class CharSheet extends Screen {
 
         // Load whichever abilities the server says we currently have equipped
         loadEquippedAbilities();
+
+        // ---------------------------------------------------------------------
+        // 1) Read the player's existing "AbilitiesBreakBlocks" value
+        //    (default false if not set)
+        // ---------------------------------------------------------------------
+        blockBreakEnabled = false;
+        if (Minecraft.getInstance().player != null) {
+            blockBreakEnabled = Minecraft.getInstance()
+                    .player
+                    .getPersistentData()
+                    .getBoolean("AbilitiesBreakBlocks");
+        }
+
+        // ---------------------------------------------------------------------
+        // 2) Add a toggle button at the bottom-left
+        // ---------------------------------------------------------------------
+        int buttonX = this.leftPos + 5;
+        int buttonY = this.topPos + this.imageHeight - 25; // 20 tall + 5 margin
+        updateToggleText();  // sets initial text based on blockBreakEnabled
+
+        this.toggleBlockBreakButton = Button
+                .builder(Component.literal(getToggleText()), btn -> {
+                    // Flip local state
+                    blockBreakEnabled = !blockBreakEnabled;
+                    // Update button text
+                    updateToggleText();
+                    // Send packet to server to update player's data
+                    NetworkHandler.INSTANCE.sendToServer(
+                            new C2SToggleBlockBreakPacket(blockBreakEnabled)
+                    );
+                })
+                .bounds(buttonX, buttonY, 60, 20)
+                .build();
+
+        this.addRenderableWidget(this.toggleBlockBreakButton);
+
+    }
+
+    // --------------------------------------------------------------------
+    // Toggle Button Helpers
+    // --------------------------------------------------------------------
+    private void updateToggleText() {
+        // Update the button's text to "BB: ON" or "BB: OFF"
+        if (this.toggleBlockBreakButton != null) {
+            this.toggleBlockBreakButton.setMessage(Component.literal(getToggleText()));
+        }
+    }
+
+    private String getToggleText() {
+        return blockBreakEnabled ? "BB: ON" : "BB: OFF";
     }
 
     /**
